@@ -2,6 +2,7 @@ use ndarray::{ArrayBase, ArrayD, Ix, IxDyn};
 use ndarray::Dim;
 use num_traits::identities::Zero;
 use rand::{thread_rng, Rng};
+use rand::distributions::{Distribution, Uniform};
 
 #[derive(Debug, Clone)]
 struct Node {
@@ -31,25 +32,29 @@ fn main() {
     
     let ix_dyn = IxDyn(&vec);
 
-    let mut a = ArrayD::<i8>::zeros(ix_dyn);
+    let mut A = ArrayD::<i8>::zeros(ix_dyn);
 
+    // Initialization
     let mut rng = thread_rng();
     for i in 0..lattice_size {
         for j in 0..lattice_size {
             let p = rng.gen_bool(1.0 / 2.0);
             if p {
-                a[[i, j]] = 1;
+                A[[i, j]] = 1;
             } else {
-                a[[i, j]] = -1;
+                A[[i, j]] = -1;
             }
         }
     }
 
     let num_iters = 100;
+    let side = Uniform::new(0, lattice_size);
 
+    // Iteration
     for iter in 0..num_iters {
-
+        let (x, y) = (rng.sample(side), rng.sample(side));
+        println!("({}, {})", x, y);
     }
 
-    println!("{:?}", a);
+    println!("{:?}", A);
 }
