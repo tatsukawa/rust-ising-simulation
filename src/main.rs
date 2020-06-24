@@ -55,35 +55,58 @@ fn main() {
     // Iteration
     for iter in 0..num_iters {
         let (x, y) = (rng.sample(side), rng.sample(side));
-        println!("{:?}", calc_energy(J, &grid));
-//        println!("({}, {})", x, y);
+
+        let mut proposal_next_grid = grid.to_owned();
+        proposal_next_grid[[y, x]] *= -1;
+
+        let delta_energy = calc_local_energy(J, &grid, (y, x)) - calc_local_energy(J, &proposal_next_grid, (y, x));
+
+        if delta_energy < 0.0 {
+            grid = proposal_next_grid;
+        } else {
+            let mut p: f64 = rng.gen::<f64>();
+        }
     }
 
     println!("{:?}", grid);
 }
 
-fn calc_energy(J: f64, grid: &ArrayD::<i8>) -> f64 {
-    let mut energy: f64 = 0.0;
+
+fn calc_local_energy(J: f64, grid: &ArrayD::<i8>, point: (usize, usize)) -> f64 {
+    let mut local_energy: f64 = 0.0;
+
+    let shape = grid.shape();
 
     let adjacent: Vec<Vec<i8>> = vec![
         [0, -1, 0, 1].to_vec(),
         [1, 0, -1, 0].to_vec(),
     ];
 
+    let y = point.0;
+    let x = point.1;
+
+    for i in 0..4 {
+        let dy: i8 = y as i8 + adjacent[0][i];
+        let dx: i8 = x as i8 + adjacent[1][i];
+        
+        if 0 <= dx && dx < shape[1] as i8 && 0 <= dy && dy < shape[0] as i8 {
+            local_energy += -J * (grid[[dy as usize, dx as usize]] as f64) * (grid[[y, x]] as f64);
+        }
+    }
+
+    local_energy
+}
+
+fn calc_global_energy(J: f64, grid: &ArrayD::<i8>) -> f64 {
+    let mut energy: f64 = 0.0;
+
     let shape = grid.shape();
     println!("{:?}", shape);
     
     for y in 0..shape[0] {
         for x in 0..shape[1] {
-            for k in 0..4 {
-                let dy: i8 = y as i8 + adjacent[0][k];
-                let dx: i8 = x as i8 + adjacent[1][k];
-                
-                if 0 <= dx && dx < shape[1] as i8 && 0 <= dy && dy < shape[0] as i8 {
-                    energy += -J * (grid[[dy as usize, dx as usize]] as f64) * (grid[[y, x]] as f64);
-                }
-            }
-        }
+            energy += calc_local_energy(J, &grid, (y, x));
+       }
     }
 
     energy
