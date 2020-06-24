@@ -22,6 +22,8 @@ struct IsingModel {
 fn main() {
     let lattice_size: usize = 10;
     let dim: usize = 2;
+    let J: f64 = 1.0;
+    let T: f64 = 1.0;
 
     let mut vec: Vec<usize> = Vec::with_capacity(dim);
     for i in 0..dim {
@@ -29,7 +31,7 @@ fn main() {
     }
 
     println!("{:?}", vec);
-    
+
     let ix_dyn = IxDyn(&vec);
 
     let mut A = ArrayD::<i8>::zeros(ix_dyn);
@@ -53,8 +55,14 @@ fn main() {
     // Iteration
     for iter in 0..num_iters {
         let (x, y) = (rng.sample(side), rng.sample(side));
+
+
         println!("({}, {})", x, y);
     }
 
     println!("{:?}", A);
+}
+
+fn calc_energy() -> f64 {
+    0.0
 }
