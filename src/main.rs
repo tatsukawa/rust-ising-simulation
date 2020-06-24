@@ -1,4 +1,4 @@
-use ndarray::{ArrayBase, ArrayD, Ix, IxDyn};
+use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn};
 use ndarray::Dim;
 use num_traits::identities::Zero;
 use rand::{thread_rng, Rng};
@@ -34,7 +34,7 @@ fn main() {
 
     let ix_dyn = IxDyn(&vec);
 
-    let mut A = ArrayD::<i8>::zeros(ix_dyn);
+    let mut grid = ArrayD::<i8>::zeros(ix_dyn);
 
     // Initialization
     let mut rng = thread_rng();
@@ -42,9 +42,9 @@ fn main() {
         for j in 0..lattice_size {
             let p = rng.gen_bool(1.0 / 2.0);
             if p {
-                A[[i, j]] = 1;
+                grid[[i, j]] = 1;
             } else {
-                A[[i, j]] = -1;
+                grid[[i, j]] = -1;
             }
         }
     }
@@ -55,14 +55,36 @@ fn main() {
     // Iteration
     for iter in 0..num_iters {
         let (x, y) = (rng.sample(side), rng.sample(side));
-
-
-        println!("({}, {})", x, y);
+        println!("{:?}", calc_energy(J, &grid));
+//        println!("({}, {})", x, y);
     }
 
-    println!("{:?}", A);
+    println!("{:?}", grid);
 }
 
-fn calc_energy() -> f64 {
-    0.0
+fn calc_energy(J: f64, grid: &ArrayD::<i8>) -> f64 {
+    let mut energy: f64 = 0.0;
+
+    let adjacent: Vec<Vec<i8>> = vec![
+        [0, -1, 0, 1].to_vec(),
+        [1, 0, -1, 0].to_vec(),
+    ];
+
+    let shape = grid.shape();
+    println!("{:?}", shape);
+    
+    for y in 0..shape[0] {
+        for x in 0..shape[1] {
+            for k in 0..4 {
+                let dy: i8 = y as i8 + adjacent[0][k];
+                let dx: i8 = x as i8 + adjacent[1][k];
+                
+                if 0 <= dx && dx < shape[1] as i8 && 0 <= dy && dy < shape[0] as i8 {
+                    energy += -J * (grid[[dy as usize, dx as usize]] as f64) * (grid[[y, x]] as f64);
+                }
+            }
+        }
+    }
+
+    energy
 }
