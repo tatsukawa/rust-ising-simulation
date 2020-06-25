@@ -1,19 +1,17 @@
+use std::fs::File;
+use std::io::{Write, BufWriter};
+use std::fmt::format;
 use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn};
 use ndarray::Dim;
 use num_traits::identities::Zero;
 use rand::{thread_rng, Rng};
 use rand::distributions::{Distribution, Uniform};
 
+
 #[derive(Debug, Clone)]
 struct Node {
     state: bool,
 }
-
-//impl Zero for Node {
-//    fn zero() -> usize {
-//        0
-//    }
-//}
 
 struct IsingModel {
 //    nodes: ArrayBase<i16, D>,
@@ -23,7 +21,7 @@ fn main() {
     let lattice_size: usize = 10;
     let dim: usize = 2;
     let J: f64 = 1.0;
-    let T: f64 = 1.0;
+    let beta: f64 = 0.5;
 
     let mut vec: Vec<usize> = Vec::with_capacity(dim);
     for i in 0..dim {
@@ -49,8 +47,11 @@ fn main() {
         }
     }
 
-    let num_iters = 100;
+    let num_iters = 40000;
     let side = Uniform::new(0, lattice_size);
+
+    // File
+    let mut file = BufWriter::new(File::create("./states.csv").unwrap());
 
     // Iteration
     for iter in 0..num_iters {
@@ -59,12 +60,27 @@ fn main() {
         let mut proposal_next_grid = grid.to_owned();
         proposal_next_grid[[y, x]] *= -1;
 
-        let delta_energy = calc_local_energy(J, &grid, (y, x)) - calc_local_energy(J, &proposal_next_grid, (y, x));
+        let local_energy = calc_local_energy(J, &grid, (y, x));
+        let flipped_local_energy = calc_local_energy(J, &proposal_next_grid, (y, x));
 
-        if delta_energy < 0.0 {
+        let diff_energy = local_energy - flipped_local_energy;
+
+        if flipped_local_energy < 0.0 {
             grid = proposal_next_grid;
         } else {
-            let mut p: f64 = rng.gen::<f64>();
+            let p: f64 = rng.gen::<f64>();
+            if p < (-1.0 * beta * flipped_local_energy).exp() {
+                grid = proposal_next_grid;
+            }
+        }
+
+        // File output
+        for y in 0..lattice_size {
+            for x in 0..lattice_size {
+                let s: String = format!("{},", grid[[y, x]]);
+                file.write(s.as_bytes()).unwrap();
+            }
+            file.write("\n".as_bytes()).unwrap();
         }
     }
 
