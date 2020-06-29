@@ -28,6 +28,22 @@ impl IsingModel {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::IsingModel;
+
+    #[test]
+    fn test_ising_model_new() {
+        let dim: usize = 2;
+        let lattice_size: usize = 100;
+        let seed_value: u8 = 0;
+        let mut shape: Vec<usize> = Vec::with_capacity(dim);
+        for i in 0..dim { shape.push(lattice_size); }
+
+        let model = IsingModel::new(shape, seed_value);
+    }
+}
+
 fn main() {
     let lattice_size: usize = 10;
     let dim: usize = 2;
