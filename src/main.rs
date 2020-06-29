@@ -1,30 +1,41 @@
 use std::fs::File;
 use std::io::{Write, BufWriter};
 use std::fmt::format;
-use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn};
-use ndarray::Dim;
-use num_traits::identities::Zero;
+use std::cell::Cell;
+use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn, Dim, LinalgScalar};
 use rand::{thread_rng, Rng};
 use rand::rngs::StdRng;
 use rand::distributions::{Distribution, Uniform};
 
 
-#[derive(Debug)]
-pub struct IsingModel {
-    grid: ArrayD::<i8>,
+#[derive(Debug, Clone)]
+pub struct IsingModel<A: LinalgScalar> {
+    grid: Array::<A, IxDyn>,
     rng: rand::rngs::StdRng
 }
 
-impl IsingModel {
-    fn new(shape: Vec<usize>, seed_value: u8) -> IsingModel {
+impl<A: LinalgScalar> IsingModel<A> {
+    fn new(shape: Vec<usize>, seed_value: u8) -> Self {
         let ix_dyn = IxDyn(&shape);
-        let mut grid = ArrayD::<i8>::zeros(ix_dyn);
 
-        IsingModel {grid: grid, rng: rand::SeedableRng::from_seed([seed_value; 32])}
+        Self {
+            grid: ArrayD::<A>::zeros(ix_dyn), 
+            rng: rand::SeedableRng::from_seed([seed_value; 32])
+        }
     }
 
-    fn init() {
+    fn init<F>(&mut self, f: F) 
+    where
+        F: Fn(bool) -> A,
+    {
+        let shape = self.grid.shape();
 
+        for i in 0..shape[0] {
+            for j in 0..shape[1] {
+                let p = self.rng.gen_bool(1.0 / 2.0);
+                self.grid[[i, j]] = f(p);
+            }
+        }
     }
 }
 
@@ -33,14 +44,24 @@ mod test {
     use super::IsingModel;
 
     #[test]
-    fn test_ising_model_new() {
+    fn test_ising_model() {
         let dim: usize = 2;
         let lattice_size: usize = 100;
         let seed_value: u8 = 0;
         let mut shape: Vec<usize> = Vec::with_capacity(dim);
         for i in 0..dim { shape.push(lattice_size); }
 
-        let model = IsingModel::new(shape, seed_value);
+        let model = IsingModel::<i8>::new(shape, seed_value);
+
+        fn f(val: bool) {
+            if val {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+
+        model.init(f);
     }
 }
 
