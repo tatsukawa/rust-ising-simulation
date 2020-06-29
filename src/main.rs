@@ -5,16 +5,27 @@ use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn};
 use ndarray::Dim;
 use num_traits::identities::Zero;
 use rand::{thread_rng, Rng};
+use rand::rngs::StdRng;
 use rand::distributions::{Distribution, Uniform};
 
 
-#[derive(Debug, Clone)]
-struct Node {
-    state: bool,
+#[derive(Debug)]
+pub struct IsingModel {
+    grid: ArrayD::<i8>,
+    rng: rand::rngs::StdRng
 }
 
-struct IsingModel {
-//    nodes: ArrayBase<i16, D>,
+impl IsingModel {
+    fn new(shape: Vec<usize>, seed_value: u8) -> IsingModel {
+        let ix_dyn = IxDyn(&shape);
+        let mut grid = ArrayD::<i8>::zeros(ix_dyn);
+
+        IsingModel {grid: grid, rng: rand::SeedableRng::from_seed([seed_value; 32])}
+    }
+
+    fn init() {
+
+    }
 }
 
 fn main() {
@@ -22,16 +33,14 @@ fn main() {
     let dim: usize = 2;
     let J: f64 = 1.0;
     let beta: f64 = 0.5;
+    let seed_value: u8 = 0;
 
     let mut vec: Vec<usize> = Vec::with_capacity(dim);
     for i in 0..dim {
         vec.push(lattice_size);
     }
 
-    println!("{:?}", vec);
-
     let ix_dyn = IxDyn(&vec);
-
     let mut grid = ArrayD::<i8>::zeros(ix_dyn);
 
     // Initialization
