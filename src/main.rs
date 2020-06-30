@@ -3,21 +3,22 @@ use std::io::{Write, BufWriter};
 use std::fmt::format;
 use std::ops::Mul;
 use std::cell::Cell;
-use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn, Dim, LinalgScalar, Array2};
+use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn, Dim, LinalgScalar, NdFloat};
 use rand::{thread_rng, Rng};
 use rand::rngs::StdRng;
 use rand::distributions::{Distribution, Uniform};
 
 
 #[derive(Debug, Clone)]
-pub struct IsingModel<A: LinalgScalar> {
+pub struct IsingModel<A: NdFloat> 
+{
     grid: ArrayD::<A>,
     rng: rand::rngs::StdRng,
     J: f64,  // exchange interaction
     beta: f64,  // inverse temperature
 }
 
-impl<A: LinalgScalar> IsingModel<A> {
+impl<A: NdFloat> IsingModel<A> {
     fn new(shape: Vec<usize>, seed_value: u8, J: f64, beta: f64) -> Self {
         let ix_dyn = IxDyn(&shape);
 
@@ -29,15 +30,27 @@ impl<A: LinalgScalar> IsingModel<A> {
         }
     }
 
+    fn assign_map<F>(&mut self, f: F)
+    where
+        F: Fn((usize, usize)) -> A,
+    {
+         // Note: only support 2 dimentional grid.
+        for y in 0..self.grid.shape()[0] {
+            for x in 0..self.grid.shape()[1] {
+                self.grid[[y, x]] = f((y, x));
+            }
+        }
+    }
+
     fn init<F>(&mut self, f: F) 
     where
         F: Fn(bool) -> A,
     {
-        // Note: only support 2 dimentional grid.
-        for i in 0..self.grid.shape()[0] {
-            for j in 0..self.grid.shape()[1] {
+         // Note: only support 2 dimentional grid.
+        for y in 0..self.grid.shape()[0] {
+            for x in 0..self.grid.shape()[1] {
                 let p = self.rng.gen_bool(1.0 / 2.0);
-                self.grid[[i, j]] = f(p);
+                self.grid[[y, x]] = f(p);
             }
         }
     }
@@ -47,10 +60,10 @@ impl<A: LinalgScalar> IsingModel<A> {
         0 <= x && x < self.grid.shape()[1] as i8 && 0 <= y && y < self.grid.shape()[0] as i8
     }
 
-    fn calc_local_energy(&mut self, J: f64, point: (usize, usize)) -> f64 
+    fn calc_local_energy(&mut self, point: (usize, usize)) -> f64 
     where 
         A: Mul<f64, Output=f64>,
-        f64: Mul<A, Output=f64>
+        f64: Mul<A, Output=f64>,
     {
         let mut local_energy: f64 = 0.0;
 
@@ -66,7 +79,7 @@ impl<A: LinalgScalar> IsingModel<A> {
             let dx: i8 = x as i8 + neighbor[1][i];
            
             if self.satisfy_boundary_cond((dy, dx)) {
-                local_energy += - self.J * (self.grid[[dy as usize, dx as usize]]) * (self.grid[[y, x]]);
+                local_energy += - self.J * (self.grid[[dy as usize, dx as usize]] * self.grid[[y, x]]);
             }
         }
 
@@ -88,17 +101,22 @@ mod test {
         let mut shape: Vec<usize> = Vec::with_capacity(dim);
         for _i in 0..dim { shape.push(lattice_size); }
 
-        let mut model = IsingModel::<i8>::new(shape, seed_value, J, beta);
+        let mut model = IsingModel::<f64>::new(shape, seed_value, J, beta);
 
         let f = |val| {
             if val {
-                return 1;
+                return 1.0;
             } else {
-                return -1;
+                return -1.0;
             }
         };
 
         model.init(f);
+
+        // if you see model.grid, then you run `cargo test -- --nocapture`
+        println!("{:?}", model.grid);
+
+        let energy: f64 = model.calc_local_energy((0, 0));
     }
 }
 
