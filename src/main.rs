@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Write, BufWriter};
 use std::fmt::format;
 use std::cell::Cell;
-use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn, Dim, LinalgScalar};
+use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn, Dim, LinalgScalar, Array2};
 use rand::{thread_rng, Rng};
 use rand::rngs::StdRng;
 use rand::distributions::{Distribution, Uniform};
@@ -10,7 +10,7 @@ use rand::distributions::{Distribution, Uniform};
 
 #[derive(Debug, Clone)]
 pub struct IsingModel<A: LinalgScalar> {
-    grid: Array::<A, IxDyn>,
+    grid: ArrayD::<A>,
     rng: rand::rngs::StdRng
 }
 
@@ -28,10 +28,9 @@ impl<A: LinalgScalar> IsingModel<A> {
     where
         F: Fn(bool) -> A,
     {
-        let shape = self.grid.shape();
-
-        for i in 0..shape[0] {
-            for j in 0..shape[1] {
+        // Note: only support 2 dimentional grid.
+        for i in 0..self.grid.shape()[0] {
+            for j in 0..self.grid.shape()[1] {
                 let p = self.rng.gen_bool(1.0 / 2.0);
                 self.grid[[i, j]] = f(p);
             }
@@ -49,17 +48,17 @@ mod test {
         let lattice_size: usize = 100;
         let seed_value: u8 = 0;
         let mut shape: Vec<usize> = Vec::with_capacity(dim);
-        for i in 0..dim { shape.push(lattice_size); }
+        for _i in 0..dim { shape.push(lattice_size); }
 
-        let model = IsingModel::<i8>::new(shape, seed_value);
+        let mut model = IsingModel::<i8>::new(shape, seed_value);
 
-        fn f(val: bool) {
+        let f = |val| {
             if val {
                 return 1;
             } else {
                 return -1;
             }
-        }
+        };
 
         model.init(f);
     }
