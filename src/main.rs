@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{Write, BufWriter};
 use std::fmt::format;
+use std::ops::Mul;
 use std::cell::Cell;
 use ndarray::{Array, ArrayBase, ArrayD, Ix, IxDyn, Dim, LinalgScalar, Array2};
 use rand::{thread_rng, Rng};
@@ -11,16 +12,20 @@ use rand::distributions::{Distribution, Uniform};
 #[derive(Debug, Clone)]
 pub struct IsingModel<A: LinalgScalar> {
     grid: ArrayD::<A>,
-    rng: rand::rngs::StdRng
+    rng: rand::rngs::StdRng,
+    J: f64,  // exchange interaction
+    beta: f64,  // inverse temperature
 }
 
 impl<A: LinalgScalar> IsingModel<A> {
-    fn new(shape: Vec<usize>, seed_value: u8) -> Self {
+    fn new(shape: Vec<usize>, seed_value: u8, J: f64, beta: f64) -> Self {
         let ix_dyn = IxDyn(&shape);
 
         Self {
             grid: ArrayD::<A>::zeros(ix_dyn), 
-            rng: rand::SeedableRng::from_seed([seed_value; 32])
+            rng: rand::SeedableRng::from_seed([seed_value; 32]),
+            J: J,
+            beta: beta
         }
     }
 
@@ -36,6 +41,37 @@ impl<A: LinalgScalar> IsingModel<A> {
             }
         }
     }
+
+    fn satisfy_boundary_cond(&mut self, point: (i8, i8)) -> bool {
+        let (y, x) = point;
+        0 <= x && x < self.grid.shape()[1] as i8 && 0 <= y && y < self.grid.shape()[0] as i8
+    }
+
+    fn calc_local_energy(&mut self, J: f64, point: (usize, usize)) -> f64 
+    where 
+        A: Mul<f64, Output=f64>,
+        f64: Mul<A, Output=f64>
+    {
+        let mut local_energy: f64 = 0.0;
+
+        let neighbor: Vec<Vec<i8>> = vec![
+            [0, -1, 0, 1].to_vec(),
+            [1, 0, -1, 0].to_vec(),
+        ];
+
+        let (y, x) = point;
+
+        for i in 0..4 {
+            let dy: i8 = y as i8 + neighbor[0][i];
+            let dx: i8 = x as i8 + neighbor[1][i];
+           
+            if self.satisfy_boundary_cond((dy, dx)) {
+                local_energy += - self.J * (self.grid[[dy as usize, dx as usize]]) * (self.grid[[y, x]]);
+            }
+        }
+
+        local_energy
+    }
 }
 
 #[cfg(test)]
@@ -47,10 +83,12 @@ mod test {
         let dim: usize = 2;
         let lattice_size: usize = 100;
         let seed_value: u8 = 0;
+        let J: f64 = 1.0;
+        let beta: f64 = 0.5;
         let mut shape: Vec<usize> = Vec::with_capacity(dim);
         for _i in 0..dim { shape.push(lattice_size); }
 
-        let mut model = IsingModel::<i8>::new(shape, seed_value);
+        let mut model = IsingModel::<i8>::new(shape, seed_value, J, beta);
 
         let f = |val| {
             if val {
